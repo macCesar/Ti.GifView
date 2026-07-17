@@ -21,8 +21,9 @@ typedef NS_ENUM(NSInteger, TiGifviewDirection) {
 @property (nonatomic, assign) NSInteger completedLoops;
 @property (nonatomic, assign) BOOL playing;
 @property (nonatomic, assign) BOOL paused;
-// If play/pause/stop is called before frames finish decoding, remember the
-// intent and apply it once -loadGIFFromData: completes.
+@property (nonatomic, assign) BOOL loading;
+// If play/resume is called before frames finish decoding, remember the intent
+// and apply it once the active load completes.
 @property (nonatomic, assign) BOOL pendingAutoStartAfterLoad;
 @end
 
@@ -122,6 +123,7 @@ typedef NS_ENUM(NSInteger, TiGifviewDirection) {
   if (url == nil) {
     return;
   }
+  self.loading = YES;
   __weak __typeof__(self) weakSelf = self;
   [TiGifviewDecoder decodeGIFAtURL:url
                              completion:^(NSArray<TiGifviewFrame *> *_Nullable frames, NSError *_Nullable error) {
@@ -134,6 +136,7 @@ typedef NS_ENUM(NSInteger, TiGifviewDirection) {
   if (data == nil) {
     return;
   }
+  self.loading = YES;
   __weak __typeof__(self) weakSelf = self;
   [TiGifviewDecoder decodeGIFData:data
                             completion:^(NSArray<TiGifviewFrame *> *_Nullable frames, NSError *_Nullable error) {
@@ -143,7 +146,9 @@ typedef NS_ENUM(NSInteger, TiGifviewDirection) {
 
 - (void)handleDecodedFrames:(NSArray<TiGifviewFrame *> *)frames error:(NSError *)error
 {
+  self.loading = NO;
   if (error != nil || frames.count == 0) {
+    self.pendingAutoStartAfterLoad = NO;
     [self.proxy fireEvent:@"error"
                 withObject:@{
                   @"success" : @(NO),
@@ -175,9 +180,9 @@ typedef NS_ENUM(NSInteger, TiGifviewDirection) {
 
 - (void)play
 {
-  if (self.frames.count == 0) {
-    // Not loaded yet (e.g. `url` was set and `start()` called back-to-back,
-    // before the async decode finished). Remember the intent so
+  if (self.loading || self.frames.count == 0) {
+    // A new URL may be decoding while frames from the previous GIF are still
+    // available. Remember the intent so
     // -handleDecodedFrames:error: honors it once frames are ready, even
     // when autoStart is NO.
     self.pendingAutoStartAfterLoad = YES;
