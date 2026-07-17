@@ -1,0 +1,6 @@
+Ti.GifView (Android) bundles the GIF decoder from Glide's third_party/gif_decoder
+component (https://github.com/bumptech/glide, tag v4.16.0), which is licensed
+under the MIT License, Copyright (c) 2013 Xcellent Creations, Inc.
+The full license text is included alongside the vendored sources at
+src/com/bumptech/glide/gifdecoder/LICENSE and ships in the distributable zip
+at documentation/glide-gif-decoder-LICENSE.txt.

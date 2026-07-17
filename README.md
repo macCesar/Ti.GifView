@@ -1,33 +1,34 @@
 # Ti.GifView
 
-A native module for Titanium that renders animated GIFs with full playback control — play, pause, resume, stop, loop count and boomerang — instead of the "fire and forget" animation `UIImage` gives you by default.
+Ti.GifView is a native Titanium module for GIF playback on iOS and Android. Use it when a regular image view is not enough: you can pause on a frame, resume later, set a loop limit, or play backward when the animation reaches the end.
 
-![Titanium](https://img.shields.io/badge/Titanium-13.1.0+-red.svg) ![Platform](https://img.shields.io/badge/platform-iOS-lightgrey.svg) ![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Maintained](https://img.shields.io/badge/Maintained-Yes-green.svg)
+![Titanium](https://img.shields.io/badge/Titanium-13.1.0+-red.svg) ![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android-lightgrey.svg) ![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Maintained](https://img.shields.io/badge/Maintained-Yes-green.svg)
 
 
 ## Features
 
-- ✅ **Full playback control**: `start()`, `pause()`, `resume()`, `stop()`
-- ✅ **Loop control**: play a fixed number of times, or loop forever
-- ✅ **Boomerang mode**: ping-pong playback instead of restarting from frame 0
-- ✅ **Scaling modes**: aspect fit, aspect fill, or stretch to fill
-- ✅ **Frame-accurate decoding**: each frame keeps its own GIF-encoded delay, driven by `CADisplayLink` — no duplicated frames, no dropped timing
-- ✅ **Dynamic properties**: set or change the `url` at any time after creation, not just at construction
-- ✅ **Complete event system**: `load`, `frame`, `complete`, `error`
-- ✅ **Local and remote GIFs**: bundled app assets or `http(s)://` URLs
+- Start, pause, resume, and stop playback.
+- Play a fixed number of loops or keep playing indefinitely.
+- Use boomerang mode to reverse at each end instead of jumping back to frame 0.
+- Choose aspect fit, aspect fill, or stretch-to-fill scaling.
+- Respect the delay stored in each GIF frame instead of forcing one playback speed.
+- Change `url` after the view has been created.
+- Listen for `load`, `frame`, `complete`, and `error` events.
+- Load GIFs from app assets or `http(s)://` URLs.
 
 ## Installation
 
-1. Copy the module to your project's `modules/iphone/` folder
-2. Add to `tiapp.xml`:
+1. Copy the iOS module to `modules/iphone/`, the Android module to `modules/android/`, or both.
+2. Add the platforms you use to `tiapp.xml`:
 
 ```xml
 <modules>
     <module platform="iphone">ti.gifview</module>
+    <module platform="android">ti.gifview</module>
 </modules>
 ```
 
-## Quick Start
+## Quick start
 
 ```javascript
 const GifView = require('ti.gifview');
@@ -54,13 +55,13 @@ gif.addEventListener('complete', (e) => {
 win.add(gif);
 ```
 
-## API Reference
+## API reference
 
 ### Properties
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `url` | String | Path or URL to the GIF. Accepts local app assets (`'myAnimation.gif'`) or remote `http(s)://` URLs. Can be set at creation **or at any point afterward** — reassigning it loads and plays the new GIF. |
+| `url` | String | Path or URL to the GIF. Accepts local app assets (`'myAnimation.gif'`) or remote `http(s)://` URLs. You can set it during creation or later. Assigning a new value loads that GIF; playback follows `autoStart` or a pending `start()` call. |
 | `autoStart` | Boolean | Whether playback starts automatically once the GIF finishes decoding. Default: `true`. |
 | `loop` | Number | Number of times to loop before stopping. `0` = infinite. Default: `0`. |
 | `boomerang` | Boolean | When `true`, playback reverses direction at each end instead of restarting from frame 0 (ping-pong). Default: `false`. |
@@ -69,81 +70,107 @@ win.add(gif);
 ### Methods
 
 #### `start()` / `play()`
-Starts playback. If called before the GIF has finished decoding (e.g. right after setting `url`), the intent is remembered and honored as soon as decoding completes — even if `autoStart` is `false`.
+
+Starts playback. A call made while the GIF is still decoding is queued until the frames are ready, even when `autoStart` is `false`.
+
 ```javascript
 gif.start();
 ```
 
 #### `pause()`
+
 Freezes playback at the current frame.
+
 ```javascript
 gif.pause();
 ```
 
 #### `resume()`
+
 Resumes playback from where it was paused.
+
 ```javascript
 gif.resume();
 ```
 
 #### `stop()`
+
 Stops playback and resets to frame 0. Also cancels any pending `start()` call that hasn't been honored yet.
+
 ```javascript
 gif.stop();
 ```
 
 #### `currentFrame()`
+
 Returns the index of the currently displayed frame.
+
 ```javascript
 const index = gif.currentFrame();
 ```
 
 #### `frameCount()`
+
 Returns the total number of frames in the loaded GIF (`0` if nothing has loaded yet).
+
 ```javascript
 const total = gif.frameCount();
 ```
 
 #### `playing()`
+
 Returns `true` if the GIF is currently animating.
+
 ```javascript
 if (gif.playing()) { /* ... */ }
 ```
 
 #### `paused()`
+
 Returns `true` if playback is paused (as opposed to stopped).
+
 ```javascript
 if (gif.paused()) { /* ... */ }
 ```
 
-> **Note:** `currentFrame`, `frameCount`, `playing` and `paused` are methods, not properties — call them with `()`, e.g. `gif.frameCount()` rather than `gif.frameCount`.
+`currentFrame`, `frameCount`, `playing`, and `paused` are methods, not properties. Call them with `()`: use `gif.frameCount()`, not `gif.frameCount`.
 
 ### Events
 
 #### `load`
-Fired once the GIF has finished decoding.
+
+Fires after the GIF has finished decoding.
+
 ```javascript
 gif.addEventListener('load', (e) => {
     console.log('frames:', e.frameCount);
 });
 ```
-**Event properties:**
+
+Event fields:
+
 - `success` (Boolean)
 - `frameCount` (Number)
 
 #### `frame`
-Fired every time the displayed frame changes. Fires at GIF frame-rate, so avoid heavy logic in this handler.
+
+Fires whenever the displayed frame changes. This can happen often, so keep the handler light.
+
 ```javascript
 gif.addEventListener('frame', (e) => {
     console.log('frame:', e.index, '/', e.frameCount);
 });
 ```
-**Event properties:**
+
+Event fields:
+
 - `index` (Number): index of the frame now being shown
 - `frameCount` (Number): total frames
 
 #### `complete`
-Fired every time a full loop finishes.
+
+Fires when a full loop finishes.
+
 ```javascript
 gif.addEventListener('complete', (e) => {
     if (e.finished) {
@@ -151,18 +178,24 @@ gif.addEventListener('complete', (e) => {
     }
 });
 ```
-**Event properties:**
+
+Event fields:
+
 - `loopCount` (Number): how many loops have completed so far
 - `finished` (Boolean): `true` if this was the last loop allowed by the `loop` property
 
 #### `error`
-Fired if the GIF could not be downloaded or decoded.
+
+Fires when the GIF cannot be downloaded or decoded.
+
 ```javascript
 gif.addEventListener('error', (e) => {
     console.error(e.message);
 });
 ```
-**Event properties:**
+
+Event fields:
+
 - `success` (Boolean): always `false`
 - `message` (String): reason for the failure
 
@@ -174,11 +207,11 @@ gif.addEventListener('error', (e) => {
 | `IMAGE_SCALING_ASPECT_FILL` | 1 | Fill the view's bounds, keep aspect ratio, may crop. |
 | `IMAGE_SCALING_FILL` | 2 | Stretch to exactly fill the view's bounds, ignoring aspect ratio. |
 
-## Advanced Examples
+## Examples
 
 ### Deferred loading with a fade-in
 
-Create the view empty, load a GIF later (e.g. once you know which one you need), and fade it in as soon as it starts playing:
+Create the view without a URL. Once the URL is available, load the GIF and fade the view in:
 
 ```javascript
 const gif = GifView.createGifView({
@@ -235,7 +268,7 @@ gif.addEventListener('complete', (e) => {
 win.add(gif);
 ```
 
-### Manual scrub / status readout
+### Status readout
 
 ```javascript
 statusLabel.addEventListener('click', () => {
@@ -247,12 +280,20 @@ statusLabel.addEventListener('click', () => {
 });
 ```
 
+## Platform notes
+
+The public API, defaults, events, and playback behavior are the same on both platforms.
+
+- iOS decodes GIF data with Image I/O and advances playback with `CADisplayLink`.
+- Android uses the vendored Glide 4.16.0 GIF decoder under its MIT license and advances playback with `Choreographer`.
+- The Android module has no runtime Maven dependencies; its decoder is packaged with the module.
+
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Bug reports and pull requests are welcome.
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+5. Open a pull request
